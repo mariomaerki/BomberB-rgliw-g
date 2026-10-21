@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Hippie Cat-Bomber</title>
+<style>
+:root{--bg:#15251f;--panel:#21392f;--cream:#fff4d6;--pink:#ff8fab;--yellow:#ffd166;--green:#70e000;--muted:#b8c9b6}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#294b3b,#101a17 75%);color:var(--cream);font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{text-align:center;padding:12px 10px 4px}h1{margin:0;font-size:clamp(1.45rem,4vw,2.5rem);letter-spacing:.02em}header p{margin:4px 0;color:var(--muted);font-size:.92rem}
+main{width:min(1100px,100%);margin:auto;padding:8px 12px 22px;display:grid;grid-template-columns:minmax(0,1fr) 265px;gap:12px}
+.panel{background:#1b3028;border:1px solid #43624e;border-radius:16px;padding:12px;box-shadow:0 12px 30px #0003}
+.game-wrap{position:relative;width:100%;overflow:hidden;border-radius:12px;background:#152a21;touch-action:none}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;background:#102017c9;font-weight:700;font-size:clamp(1rem,3vw,1.6rem);pointer-events:none}
+.side h2{font-size:1rem;margin:2px 0 8px}.side p,.side li{font-size:.88rem;line-height:1.4;color:var(--muted)}
+button,input{font:inherit;border-radius:10px;border:1px solid #577760;padding:9px 10px}
+button{background:#ffd166;color:#263025;font-weight:750;cursor:pointer;border:0}button:active{transform:scale(.98)}button.secondary{background:#2d493b;color:var(--cream);border:1px solid #577760}
+input{background:#102219;color:var(--cream);width:100%;min-width:0}
+.row{display:flex;gap:6px;margin:7px 0}.row>*{flex:1;min-width:0}.status{font-size:.82rem;color:#c9e5c8;min-height:2.3em;padding:5px 0}
+hr{border:0;border-top:1px solid #3c5947;margin:12px 0}
+.pill{display:inline-block;background:#2e4b3a;padding:4px 8px;border-radius:99px;font-size:.78rem;margin:2px}
+.controls{display:none;margin-top:10px;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+.pad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,43px);gap:4px;justify-content:center}
+.pad button{padding:0;font-size:1.2rem;touch-action:none}.pad .empty{visibility:hidden}
+.actionbuttons{display:flex;flex-direction:column;gap:6px}.actionbuttons button{min-height:42px;touch-action:none}
+.hint{font-size:.78rem;color:#9db7a3}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:6px 8px 18px}.side{order:2}.controls{display:grid}.panel{padding:9px}header{padding-top:10px}.side .howto{display:none}}
+</style>
+</head>
+<body>
+<header><h1>🌼 Hippie Cat-Bomber 🐈</h1><p>Blumen im Haar, Katzenbomben im Feld und ein Fahrrad für Extra-Speed.</p></header>
+<main>
+<section class="panel">
+  <div class="game-wrap"><canvas id="game" width="672" height="504" aria-label="Hippie Cat-Bomber Spielfeld"></canvas><div id="overlay">🌈 Bereit für die Flower-Power?<br>Starte ein Spiel oder verbinde dich mit Freunden.</div></div>
+  <div class="controls" aria-label="Touch-Steuerung">
+    <div class="pad">
+      <button class="empty" tabindex="-1"> </button><button data-key="up">▲</button><button class="empty" tabindex="-1"> </button>
+      <button data-key="left">◀</button><button data-key="down">▼</button><button data-key="right">▶</button>
+    </div>
+    <div class="actionbuttons"><button data-key="bomb">🐈 Katze ablegen</button><button class="secondary" data-key="bike">🚲 Bike-Power</button></div>
+  </div>
+  <p class="hint">Tastatur: WASD/Pfeile bewegen · Leertaste = Katzenbombe · B = Bike-Power (falls eingesammelt). Auf Touchscreens die Tasten verwenden.</p>
+</section>
+<aside class="panel side">
+  <h2>🌍 Multiplayer</h2>
+  <p>Ein Gerät erstellt den Raum. Die anderen geben denselben Raumcode ein. Der Host muss das Spiel geöffnet lassen.</p>
+  <div class="row"><button id="hostBtn">Raum erstellen</button><button id="joinBtn" class="secondary">Beitreten</button></div>
+  <label for="room">Raumcode</label><input id="room" placeholder="z. B. FLOWER42" maxlength="16" autocomplete="off">
+  <div class="status" id="netStatus">Noch nicht verbunden.</div>
+  <div class="row"><button id="copyBtn" class="secondary">Code kopieren</button><button id="disconnectBtn" class="secondary">Trennen</button></div>
+  <hr>
+  <h2>🎮 Spiel</h2>
+  <div class="row"><button id="startBtn">Neues Spiel</button><button id="pauseBtn" class="secondary">Pause</button></div>
+  <p id="players">Spieler: 1</p>
+  <p><span class="pill">🐈 Katzenbombe</span><span class="pill">🚲 Extra-Speed</span><span class="pill">🌼 Hippie</span></p>
+  <hr>
+  <div class="howto"><h2>So geht's</h2><ul>
+    <li>Sprenge brüchige Blumen-Kisten mit Katzenbomben.</li>
+    <li>Weiche der Explosion aus – auch deine eigene Bombe kann dich erwischen!</li>
+    <li>Sammle 🚲 ein, um schneller zu laufen.</li>
+    <li>Letzter Hippie im Spiel gewinnt. Mit 2–4 Spielern macht's am meisten Spaß.</li>
+  </ul></div>
+  <p class="hint">Multiplayer nutzt PeerJS/WebRTC über einen öffentlichen Signalisierungsdienst. Beide Geräte benötigen Internet und müssen diese HTML-Datei öffnen können. Für den Raumcode wird keine Anmeldung benötigt.</p>
+</aside>
+</main>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),overlay=document.getElementById('overlay');
+const COLS=13,ROWS=9,TILE=56,W=COLS*TILE,H=ROWS*TILE;
+const keys={up:false,down:false,left:false,right:false,bomb:false,bike:false};
+let peer=null,conn=null,hostMode=false,guestMode=false,roomPeerId='',connections=[],netTimer=null;
+let game=null,paused=false,last=0,localPlayerId='p1',guestInput={};
+const $=id=>document.getElementById(id);
+function status(s){$('netStatus').textContent=s}
+function setOverlay(s){overlay.innerHTML=s;overlay.style.display=s?'flex':'none'}
+function rand(n){return Math.floor(Math.random()*n)}
+function makeGame(){
+ const blocks=[];
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+  if(x===0||y===0||x===COLS-1||y===ROWS-1||(x%2===0&&y%2===0))blocks.push({x,y,hard:true});
+  else if(!((x<3&&y<3)||(x>COLS-4&&y>ROWS-4)||(x<3&&y>ROWS-4)||(x>COLS-4&&y<3))&&Math.random()<.65)blocks.push({x,y,hard:false});
+ }
+ const starts=[{x:1,y:1},{x:11,y:7},{x:11,y:1},{x:1,y:7}];
+ const players=[{id:'p1',name:'Flower',x:1.5,y:1.5,alive:true,speed:2.65,bombs:1,bike:false,color:'#ff8fab',input:{} }];
+ return {blocks,players,bombs:[],flames:[],items:[],running:true,winner:null,t:0,nextId:2,starts};
+}
+function addPlayer(id,name){
+ if(!game||game.players.length>=4)return false;
+ if(game.players.some(p=>p.id===id))return true;
+ const s=game.starts[game.players.length]||{x:1,y:1};
+ game.players.push({id,name,x:s.x+.5,y:s.y+.5,alive:true,speed:2.65,bombs:1,bike:false,color:['#ff8fab','#9bf6ff','#caffbf','#ffd6a5'][game.players.length],input:{}});
+ return true;
+}
+function cell(x,y){return {x:Math.floor(x),y:Math.floor(y)}}
+function blockAt(x,y){return game.blocks.find(b=>b.x===x&&b.y===y)}
+function bombAt(x,y){return game.bombs.find(b=>b.x===x&&b.y===y)}
+function blocked(x,y){
+ const c=cell(x,y);
+ return !!blockAt(c.x,c.y)||!!bombAt(c.x,c.y);
+}
+function canMove(p,nx,ny){
+ const r=.22;
+ return !blocked(nx-r,ny-r)&&!blocked(nx+r,ny-r)&&!blocked(nx-r,ny+r)&&!blocked(nx+r,ny+r);
+}
+function dropBomb(p){
+ if(!game||!game.running||!p.alive||p.bombs<=0)return;
+ const c=cell(p.x,p.y);
+ if(bombAt(c.x,c.y))return;
+ game.bombs.push({x:c.x,y:c.y,owner:p.id,fuse:1.65,power:2});
+ p.bombs--;
+}
+function explode(b){
+ game.flames.push({x:b.x,y:b.y,ttl:.55,cells:[]});
+ const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+ const hits=[{x:b.x,y:b.y}];
+ for(const [dx,dy] of dirs)for(let i=1;i<=b.power;i++){
+  const x=b.x+dx*i,y=b.y+dy*i;
+  if(blockAt(x,y)?.hard)break;
+  hits.push({x,y});
+  const soft=blockAt(x,y);
+  if(soft&&!soft.hard){game.blocks=game.blocks.filter(z=>z!==soft);if(Math.random()<.22)game.items.push({x,y,type:Math.random()<.55?'bike':'bomb'});break}
+ }
+ game.flames[game.flames.length-1].cells=hits;
+ // Chain-react bombs
+ for(const hit of hits){const other=bombAt(hit.x,hit.y);if(other&&other!==b){other.fuse=0}}
+ for(const p of game.players)if(p.alive&&hits.some(h=>h.x===Math.floor(p.x)&&h.y===Math.floor(p.y)))p.alive=false;
+}
+function update(dt){
+ if(!game||paused||!game.running)return;
+ game.t+=dt;
+ for(const p of game.players){
+  if(!p.alive)continue;
+  const inp=p.input||{};
+  let dx=(inp.right?1:0)-(inp.left?1:0),dy=(inp.down?1:0)-(inp.up?1:0);
+  if(dx&&dy){dx*=.707;dy*=.707}
+  const speed=p.bike?4.0:2.65;
+  const nx=p.x+dx*speed*dt,ny=p.y+dy*speed*dt;
+  if(dx&&canMove(p,nx,p.y))p.x=nx;
+  if(dy&&canMove(p,p.x,ny))p.y=ny;
+  if(inp.bomb){dropBomb(p);inp.bomb=false}
+  const item=game.items.find(it=>it.x===Math.floor(p.x)&&it.y===Math.floor(p.y));
+  if(item){if(item.type==='bike')p.bike=true;else p.bombs=Math.min(3,p.bombs+1);game.items=game.items.filter(i=>i!==item)}
+ }
+ for(const b of [...game.bombs]){b.fuse-=dt;if(b.fuse<=0){game.bombs=game.bombs.filter(z=>z!==b);explode(b);const owner=game.players.find(p=>p.id===b.owner);if(owner)owner.bombs=Math.min(3,owner.bombs+1)}}
+ game.flames=game.flames.filter(f=>(f.ttl-=dt)>0);
+ const alive=game.players.filter(p=>p.alive);
+ if(game.players.length>1&&alive.length<=1){game.running=false;game.winner=alive[0]?.name||'Niemand';setOverlay(alive.length?`🏆 ${game.winner} gewinnt!<br>Drücke „Neues Spiel“ für eine Revanche.`:'💥 Alle Hippies erwischt!<br>Starte eine neue Runde.')}
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#1c3829';ctx.fillRect(0,0,W,H);
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+  ctx.fillStyle=(x+y)%2?'#254532':'#294b35';ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+  ctx.fillStyle='#ffffff0c';ctx.beginPath();ctx.arc(x*TILE+10+(x*7%25),y*TILE+12+(y*5%25),2,0,Math.PI*2);ctx.fill();
+ }
+ for(const b of game?.blocks||[]){
+  const x=b.x*TILE,y=b.y*TILE;
+  if(b.hard){ctx.fillStyle='#536b5a';ctx.fillRect(x+2,y+2,TILE-4,TILE-4);ctx.fillStyle='#738a70';ctx.fillRect(x+7,y+7,TILE-14,7);ctx.fillStyle='#354b3b';ctx.fillRect(x+7,y+20,TILE-14,TILE-26)}
+  else{ctx.fillStyle='#9a6b46';ctx.fillRect(x+4,y+4,TILE-8,TILE-8);ctx.fillStyle='#d5a06b';ctx.fillRect(x+9,y+8,TILE-18,TILE-16);ctx.font='23px sans-serif';ctx.textAlign='center';ctx.fillText('🌼',x+TILE/2,y+TILE/2+8)}
+ }
+ for(const it of game?.items||[]){ctx.font='30px sans-serif';ctx.textAlign='center';ctx.fillText(it.type==='bike'?'🚲':'🌺',it.x*TILE+TILE/2,it.y*TILE+TILE/2+11)}
+ for(const b of game?.bombs||[]){const pulse=1+Math.sin(performance.now()/100)*.08;ctx.save();ctx.translate(b.x*TILE+TILE/2,b.y*TILE+TILE/2);ctx.scale(pulse,pulse);ctx.font='39px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🐈',0,1);ctx.restore();ctx.fillStyle='#fff1b5';ctx.beginPath();ctx.arc(b.x*TILE+TILE/2,b.y*TILE+8,3,0,Math.PI*2);ctx.fill()}
+ for(const f of game?.flames||[]){for(const c of f.cells){ctx.fillStyle='#ffb703aa';ctx.fillRect(c.x*TILE+4,c.y*TILE+4,TILE-8,TILE-8);ctx.font='30px sans-serif';ctx.textAlign='center';ctx.fillText('💥',c.x*TILE+TILE/2,c.y*TILE+TILE/2+10)}}
+ for(const p of game?.players||[]){if(!p.alive)continue;const x=p.x*TILE,y=p.y*TILE;
+  ctx.beginPath();ctx.fillStyle='#0005';ctx.ellipse(x,y+15,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.fillStyle=p.color;ctx.arc(x,y,17,0,Math.PI*2);ctx.fill();
+  ctx.font='28px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🧔🏻‍♂️',x,y+1);
+  ctx.font='15px sans-serif';ctx.fillText('🌼',x,y-17);
+  if(p.bike){ctx.font='15px sans-serif';ctx.fillText('🚲',x+18,y+15)}
+  ctx.font='11px system-ui';ctx.fillStyle='#fff';ctx.fillText(p.name,x,y+30);
+ }
+ $('players').textContent='Spieler: '+(game?.players.length||1)+' · Aktiv: '+(game?.players.filter(p=>p.alive).length||0);
+}
+function frame(ts){const dt=Math.min((ts-last)/1000||0,.04);last=ts;if(hostMode||!guestMode)update(dt);draw();if(hostMode&&connections.length){if(!netTimer||ts-netTimer>65){netTimer=ts;broadcast({type:'state',game})}}requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+function currentPlayer(){return game?.players.find(p=>p.id===localPlayerId)}
+function setInput(k,v){keys[k]=v;if(guestMode){if(k==='bomb'&&v)send({type:'input',id:localPlayerId,input:{bomb:true}});else if(['up','down','left','right'].includes(k))send({type:'input',id:localPlayerId,input:{[k]:v}});return}const p=currentPlayer();if(p){if(k==='bomb'&&v)p.input.bomb=true;else if(k!=='bike')p.input[k]=v;else if(v&&p.bike)p.speed=4}}
+window.addEventListener('keydown',e=>{let k=({ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',' ':'bomb',b:'bike'})[e.key];if(k){e.preventDefault();setInput(k,true)}});
+window.addEventListener('keyup',e=>{let k=({ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',' ':'bomb',b:'bike'})[e.key];if(k&&k!=='bomb')setInput(k,false)});
+document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.dataset.key;const down=e=>{e.preventDefault();setInput(k,true)},up=e=>{e.preventDefault();if(k!=='bomb')setInput(k,false)};btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointerleave',up);btn.addEventListener('pointercancel',up)});
+function send(msg){if(conn&&conn.open)conn.send(msg)}
+function broadcast(msg){connections=connections.filter(c=>c.open);for(const c of connections)try{c.send(msg)}catch(e){}}
+function cleanPeer(){if(peer){try{peer.destroy()}catch(e){}}peer=null;conn=null;connections=[];hostMode=false;guestMode=false}
+function safeRoom(){return $('room').value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,16)}
+function roomId(code){return 'hippie-cat-bomber-'+code.toLowerCase()}
+function setupPeer(p){peer=p;p.on('error',e=>status('Verbindungsfehler: '+e.type+'. Prüfe den Raumcode und versuche es erneut.'));p.on('disconnected',()=>status('Verbindung zum Signalisierungsdienst unterbrochen.'))}
+$('hostBtn').onclick=()=>{
+ const code=safeRoom()||('FLOWER'+Math.floor(100+Math.random()*900));$('room').value=code;cleanPeer();hostMode=true;guestMode=false;game=makeGame();localPlayerId='p1';setOverlay('🌈 Raum wird vorbereitet …');
+ if(!window.Peer){status('PeerJS konnte nicht geladen werden. Internetverbindung prüfen.');return}
+ const p=new Peer(roomId(code));setupPeer(p);
+ p.on('open',id=>{status('Raum bereit! Teile den Code '+code+' mit deinen Freunden.');setOverlay('🌼 Raum bereit!<br>Warte auf Mitspieler oder starte das Spiel.');});
+ p.on('connection',c=>{if(game.players.length>=4){c.on('open',()=>c.send({type:'error',message:'Der Raum ist voll (max. 4 Spieler).'}));return}
+  connections.push(c);c.on('open',()=>{const id='p'+game.nextId++;addPlayer(id,'Hippie '+id.slice(1));c.send({type:'welcome',id,game});status('Mitspieler verbunden: '+game.players.length);});
+  c.on('data',m=>{if(m.type==='input'){const pl=game.players.find(z=>z.id===m.id);if(pl)Object.assign(pl.input,m.input)}else if(m.type==='restart'){game=makeGame();for(let i=1;i<connections.length+1;i++)addPlayer('p'+(i+1),'Hippie '+(i+1));broadcast({type:'state',game})}});
+  c.on('close',()=>{game.players=game.players.filter(pl=>pl.id!=='');status('Ein Mitspieler hat getrennt.')});
+ });
+};
+$('joinBtn').onclick=()=>{
+ const code=safeRoom();if(!code){status('Bitte zuerst den Raumcode eingeben.');return}
+ cleanPeer();guestMode=true;hostMode=false;localPlayerId='';setOverlay('🌈 Verbinde mit dem Raum …');
+ if(!window.Peer){status('PeerJS konnte nicht geladen werden. Internetverbindung prüfen.');return}
+ const p=new Peer();setupPeer(p);
+ p.on('open',()=>{conn=p.connect(roomId(code),{reliable:true});conn.on('open',()=>status('Verbunden! Warte auf den Spielstand …'));conn.on('data',m=>{if(m.type==='welcome'){localPlayerId=m.id;game=m.game;status('Du spielst als '+m.id+'. Viel Glück!');setOverlay('');}else if(m.type==='state'){game=m.game;if(game?.running)setOverlay('');}else if(m.type==='error')status(m.message)});conn.on('close',()=>status('Verbindung zum Host beendet.'))});
+};
+$('startBtn').onclick=()=>{
+ if(guestMode){send({type:'restart'});return}
+ if(!game)game=makeGame();else{const old=game.players.map(p=>({id:p.id,name:p.name,color:p.color}));game=makeGame();for(let i=1;i<old.length;i++){addPlayer(old[i].id,old[i].name);const p=game.players[i];if(p)p.color=old[i].color}}
+ paused=false;setOverlay('');broadcast({type:'state',game});
+};
+$('pauseBtn').onclick=()=>{if(guestMode){status('Pause kann nur der Host setzen.');return}paused=!paused;$('pauseBtn').textContent=paused?'Weiter':'Pause';setOverlay(paused?'⏸️ Pause':'' )};
+$('copyBtn').onclick=async()=>{const code=safeRoom();if(!code){status('Erstelle zuerst einen Raum.');return}try{await navigator.clipboard.writeText(code);status('Raumcode kopiert: '+code)}catch(e){$('room').select();status('Code markieren und kopieren: '+code)}};
+$('disconnectBtn').onclick=()=>{cleanPeer();status('Getrennt.');setOverlay('🌈 Getrennt<br>Erstelle einen Raum oder tritt einem bei.')};
+canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'){const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(y>.75&&x>.75)setInput('bomb',true)}});
+})();
+</script>
+</body>
+</html>
